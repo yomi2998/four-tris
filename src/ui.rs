@@ -12,7 +12,7 @@ pub const FONT20: f64 = 30.0;
 pub const FONT30: f64 = 52.0;
 pub const FONT50: f64 = 75.0;
 
-const BUTTON_TEXT: [&str; 2] = ["TRAINING  MODE  ", "        SETTINGS"];
+const BUTTON_TEXT: [&str; 3] = ["TRAINING  MODE  ", "        SETTINGS", "COPY BOARD"];
 
 fn mode_button_text(mode: crate::game::Mode) -> &'static str {
     match mode {

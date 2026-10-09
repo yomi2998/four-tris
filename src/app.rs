@@ -50,7 +50,7 @@ pub const SETTINGS_PANELSIZE: f64 = 900.0;
 
 pub const MODEBUTTON: usize = 0;
 pub const SETTBUTTON: usize = 1;
-pub const TESTBUTTON: usize = 2;
+pub const COPYBUTTON: usize = 2;
 pub const HOLDBUTTON: usize = 3;
 pub const HOLDDELETE: usize = 4;
 pub const HOLDCHECK: usize = 5;
@@ -371,7 +371,7 @@ impl App {
         match index {
             MODEBUTTON => [al, ab - 80.0, 75.0, 35.0],
             SETTBUTTON => [al, ab - 40.0, 75.0, 35.0],
-            TESTBUTTON => [al, ab - 120.0, 75.0, 35.0],
+            COPYBUTTON => [al, ab - 120.0, 75.0, 35.0],
             HOLDBUTTON => [al, at + 150.0, 75.0, 80.0],
             HOLDDELETE => [al + 50.0, at + 155.0, 20.0, 20.0],
             HOLDCHECK => [al, at + 232.0, 75.0, 18.0],
@@ -604,6 +604,36 @@ impl App {
         if let Ok(mut clipboard) = arboard::Clipboard::new() {
             let _ = clipboard.set_text(text);
         }
+    }
+
+    pub fn board_reachability_string(&self) -> String {
+        let w = self.game.grid_w();
+        let h = self.game.grid_h();
+        let mut s = String::with_capacity((w + 3) * h);
+        for row in 0..h {
+            s.push('"');
+            for col in 0..w {
+                let filled = self.game.grid[w - 1 - col][row] != 0;
+                s.push(if filled { 'X' } else { '.' });
+            }
+            s.push('"');
+            if row + 1 < h {
+                s.push('\n');
+            }
+        }
+        s
+    }
+
+    pub fn copy_board_reachability(&mut self) {
+        let text = self.board_reachability_string();
+        let copied = arboard::Clipboard::new().ok().is_some_and(|mut c| c.set_text(&text).is_ok());
+        let (title, subtitle) = if copied {
+            ("BOARD COPIED".to_string(), String::new())
+        } else {
+            ("CLIPBOARD".to_string(), "Failed to copy the board.".to_string())
+        };
+        self.game.pending_comment = Some((title, subtitle, 2500));
+        self.game.changed = true;
     }
 
     pub fn paste_state(&mut self) {
@@ -1154,7 +1184,7 @@ impl App {
         match index {
             MODEBUTTON => self.switch_mode(),
             SETTBUTTON => self.open_settings(),
-            TESTBUTTON => {}
+            COPYBUTTON => self.copy_board_reachability(),
             SHUFBUTTON => self.game.bag_shuffle(),
             NEXTBUTTON => self.open_queue_input(),
             HOLDCHECK => {
@@ -1675,5 +1705,55 @@ mod tests {
         app.update_hover();
         assert!(app.buttons[HOLDBUTTON][0]);
         assert!(!app.buttons[HOLDDELETE][0]);
+    }
+
+    #[test]
+    fn reachability_board_string_round_trips_through_board_hpp_layout() {
+        fn chunk_to_under(chunk: &str) -> u64 {
+            let mut res = 0u64;
+            for c in chunk.chars() {
+                res *= 2;
+                if c == 'X' {
+                    res += 1;
+                }
+            }
+            res
+        }
+
+        let mut app = App::new();
+        let (w, h) = (app.game.grid_w(), app.game.grid_h());
+        app.game.grid[0][h - 1] = 8;
+        app.game.grid[w - 1][h - 1] = 2;
+        app.game.grid[0][0] = 8;
+        app.game.grid[2][h - 5] = 5;
+        app.game.grid[w / 2][h / 2] = 1;
+        let quoted = app.board_reachability_string();
+        let lines: Vec<&str> = quoted.lines().collect();
+        assert_eq!(lines.len(), h);
+        for line in &lines {
+            assert_eq!(line.len(), w + 2);
+            assert!(line.starts_with('"') && line.ends_with('"'));
+        }
+        let s: String = quoted.chars().filter(|c| *c != '"' && *c != '\n').collect();
+        assert_eq!(s.len(), w * h);
+
+        let lines_per_under = 64 / w;
+        let used = lines_per_under * w;
+        let num_of_under = (h - 1) / lines_per_under + 1;
+        let remaining = num_of_under * used - w * h;
+        let last = num_of_under - 1;
+        let mut data = vec![0u64; num_of_under];
+        for i in 0..last {
+            data[i] = chunk_to_under(&s[w * h - (i + 1) * used..w * h - i * used]);
+        }
+        data[last] = chunk_to_under(&s[..used - remaining]);
+
+        for x in 0..w {
+            for y in 0..h {
+                let bit = (y % lines_per_under) * w + x;
+                let set = (data[y / lines_per_under] >> bit) & 1 == 1;
+                assert_eq!(set, app.game.grid[x][h - 1 - y] != 0, "cell ({x},{y})");
+            }
+        }
     }
 }
