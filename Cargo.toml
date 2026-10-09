@@ -21,6 +21,9 @@ ashpd = { version = "0.13", default-features = false, features = ["screenshot", 
 tokio = { version = "1", default-features = false, features = ["rt", "time"] }
 arboard = { version = "3", default-features = false, features = ["image-data", "wayland-data-control"] }
 
+[target."cfg(windows)".dependencies]
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_WindowsAndMessaging"] }
+
 [features]
 default = ["x11-capture"]
 x11-capture = ["dep:x11rb"]

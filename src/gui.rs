@@ -83,7 +83,7 @@ impl GuiState {
     fn begin_snap_capture(&mut self) {
         let Some(app) = self.app.as_mut() else { return };
         app.snap_request = false;
-        if self.is_x11 {
+        if self.is_x11 || cfg!(windows) {
             let Some(window) = &self.window else { return };
             window.set_visible(false);
             self.snap_phase = Some(SnapPhase::Hiding(Instant::now()));

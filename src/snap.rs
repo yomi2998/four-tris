@@ -48,7 +48,88 @@ pub fn capture_monitor_under_cursor() -> Option<(crate::render::Bitmap, i32, i32
     Some((bitmap, x as i32, y as i32))
 }
 
-#[cfg(not(all(unix, feature = "x11-capture")))]
+#[cfg(target_os = "windows")]
+pub fn capture_monitor_under_cursor() -> Option<(crate::render::Bitmap, i32, i32)> {
+    use windows_sys::Win32::Foundation::POINT;
+    use windows_sys::Win32::Graphics::Gdi::{
+        BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC,
+        GetDIBits, GetMonitorInfoW, MonitorFromPoint, ReleaseDC, SelectObject, BITMAPINFO,
+        BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS, MONITORINFO, MONITOR_DEFAULTTONEAREST, SRCCOPY,
+    };
+    use windows_sys::Win32::UI::WindowsAndMessaging::GetCursorPos;
+
+    unsafe {
+        let mut pt = POINT { x: 0, y: 0 };
+        if GetCursorPos(&mut pt) == 0 {
+            return None;
+        }
+        let monitor = MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
+        if monitor.is_null() {
+            return None;
+        }
+        let mut info: MONITORINFO = std::mem::zeroed();
+        info.cbSize = std::mem::size_of::<MONITORINFO>() as u32;
+        if GetMonitorInfoW(monitor, &mut info) == 0 {
+            return None;
+        }
+        let (x, y) = (info.rcMonitor.left, info.rcMonitor.top);
+        let (w, h) = (info.rcMonitor.right - x, info.rcMonitor.bottom - y);
+        if w <= 0 || h <= 0 {
+            return None;
+        }
+
+        let screen_dc = GetDC(std::ptr::null_mut());
+        if screen_dc.is_null() {
+            return None;
+        }
+        let mem_dc = CreateCompatibleDC(screen_dc);
+        let bitmap = if mem_dc.is_null() {
+            std::ptr::null_mut()
+        } else {
+            CreateCompatibleBitmap(screen_dc, w, h)
+        };
+        let mut result: Option<(crate::render::Bitmap, i32, i32)> = None;
+        if !bitmap.is_null() {
+            let old = SelectObject(mem_dc, bitmap);
+            if BitBlt(mem_dc, 0, 0, w, h, screen_dc, x, y, SRCCOPY) != 0 {
+                let mut bmi: BITMAPINFO = std::mem::zeroed();
+                bmi.bmiHeader.biSize = std::mem::size_of::<BITMAPINFOHEADER>() as u32;
+                bmi.bmiHeader.biWidth = w;
+                bmi.bmiHeader.biHeight = -h;
+                bmi.bmiHeader.biPlanes = 1;
+                bmi.bmiHeader.biBitCount = 32;
+                bmi.bmiHeader.biCompression = BI_RGB;
+                let mut buf = vec![0u8; w as usize * h as usize * 4];
+                let lines = GetDIBits(
+                    screen_dc,
+                    bitmap,
+                    0,
+                    h as u32,
+                    buf.as_mut_ptr().cast(),
+                    &mut bmi,
+                    DIB_RGB_COLORS,
+                );
+                if lines == h {
+                    let mut bmp = crate::render::Bitmap::new(w as usize, h as usize);
+                    for (i, px) in bmp.px.iter_mut().enumerate() {
+                        let base = i * 4;
+                        *px = crate::render::pack_rgb(buf[base + 2], buf[base + 1], buf[base]);
+                    }
+                    result = Some((bmp, x, y));
+                }
+            }
+            SelectObject(mem_dc, old);
+            DeleteObject(bitmap);
+        }
+        if !mem_dc.is_null() {
+            DeleteDC(mem_dc);
+        }
+        ReleaseDC(std::ptr::null_mut(), screen_dc);
+        result
+    }
+}
+
+#[cfg(not(any(all(unix, feature = "x11-capture"), target_os = "windows")))]
 pub fn capture_monitor_under_cursor() -> Option<(crate::render::Bitmap, i32, i32)> {
     None
 }

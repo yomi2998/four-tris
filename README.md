@@ -64,9 +64,9 @@ Notes:
     uses `slurp` + `grim` so you can drag-select a region on any monitor
     (nothing is hidden, multi-monitor friendly, niri included), falling back
     to a `grim` full capture or the XDG screenshot portal when `slurp` is
-    missing; on X11 (XWayland included) it captures the monitor under the
-    cursor and lets you select the region in-app. If no capture method is
-    available it will tell you so.
+    missing; on X11 (XWayland included) and Windows it captures the monitor
+    under the cursor and lets you select the region in-app. If no capture
+    method is available it will tell you so.
 -   Clipboard game-state sharing is compatible with the original Windows
     client (the board payload uses the same LZNT1 wire format).
 -   Game logic is covered by unit tests: `cargo test`.
@@ -91,7 +91,7 @@ The Rust port lives in `src/`:
 -   `state.rs` – undo/redo ring and clipboard state codec (base64 + LZNT1)
 -   `config.rs` / `ini.rs` – settings and skin handling
 -   `audio.rs` – sound effects via `rodio`
--   `snap.rs` – screen capture for the snapshot tool (slurp+grim, grim, XDG portal, X11)
+-   `snap.rs` – screen capture for the snapshot tool (slurp+grim, grim, XDG portal, X11, Windows GDI)
 
 For features and larger changes, open an issue here first to discuss the
 approach; pull requests against this repository are welcome. Contributions

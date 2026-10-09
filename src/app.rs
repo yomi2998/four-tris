@@ -654,7 +654,7 @@ impl App {
         }
     }
 
-    pub fn input_box_key(&mut self, vk: u32, shift: bool) {
+    pub fn input_box_key(&mut self, vk: u32, _shift: bool) {
         let Some(box_state) = &mut self.input_box else { return };
         match vk {
             vk::VK_RETURN => {
@@ -685,14 +685,7 @@ impl App {
                 box_state.text.pop();
                 self.game.changed = true;
             }
-            _ => {
-                if let Some(ch) = vk_char(vk, shift) {
-                    if box_state.text.chars().count() < 30000 {
-                        box_state.text.push(ch);
-                        self.game.changed = true;
-                    }
-                }
-            }
+            _ => {}
         }
     }
 
@@ -909,8 +902,17 @@ impl App {
             return;
         }
         let (mx, my) = (self.mouse[0], self.mouse[1]);
+        let mut target = BUTTONS;
+        let mut target_area = f64::INFINITY;
         for i in 0..BUTTONS {
-            let hovered = self.in_rect(&self.button_rect(i), mx, my);
+            let rect = self.button_rect(i);
+            if self.in_rect(&rect, mx, my) && rect[2] * rect[3] < target_area {
+                target_area = rect[2] * rect[3];
+                target = i;
+            }
+        }
+        for i in 0..BUTTONS {
+            let hovered = i == target;
             if self.buttons[i][0] != hovered {
                 self.buttons[i][0] = hovered;
                 self.game.changed = true;
@@ -1445,44 +1447,6 @@ pub fn load_bitmap(path: &std::path::Path) -> Option<Bitmap> {
     Some(Bitmap::from_rgba8(rgba.width() as usize, rgba.height() as usize, rgba.as_raw()))
 }
 
-pub fn vk_char(vk: u32, shift: bool) -> Option<char> {
-    let base = match vk {
-        0x30..=0x39 => (b'0' + (vk - 0x30) as u8) as char,
-        0x41..=0x5A => {
-            let c = (b'A' + (vk - 0x41) as u8) as char;
-            return Some(if shift { c } else { c.to_ascii_lowercase() });
-        }
-        0xBA => ';',
-        0xBB => '=',
-        0xBC => ',',
-        0xBD => '-',
-        0xBE => '.',
-        0xBF => '/',
-        0xC0 => '`',
-        0xDB => '[',
-        0xDC => '\\',
-        0xDD => ']',
-        0xDE => '\'',
-        0x20 => ' ',
-        _ => return None,
-    };
-    let shifted = match base {
-        ';' => ':',
-        '=' => '+',
-        ',' => '<',
-        '-' => '_',
-        '.' => '>',
-        '/' => '?',
-        '`' => '~',
-        '[' => '{',
-        '\\' => '|',
-        ']' => '}',
-        '\'' => '"',
-        _ => base,
-    };
-    Some(if shift { shifted } else { base })
-}
-
 pub fn vk_from_keycode(code: KeyCode) -> u32 {
     let vk = match code {
         KeyCode::Backspace => 0x08,
@@ -1667,5 +1631,44 @@ mod tests {
         assert!(!app.game.lost);
         app.step();
         assert!(!app.game.lost);
+    }
+
+    #[test]
+    fn input_box_receives_each_typed_char_once() {
+        let mut app = App::new();
+        app.open_queue_input();
+        let prefill = app.input_box.as_ref().unwrap().text.clone();
+        app.handle_key_down(0x49, false, false, false);
+        if app.input_box.is_some() {
+            app.input_box_text("I");
+        }
+        let expected = format!("{prefill}I");
+        assert_eq!(app.input_box.as_ref().map(|b| b.text.as_str()), Some(expected.as_str()));
+        app.input_box_key(vk::VK_RETURN, false);
+        assert!(app.input_box.is_none());
+        let last = app.game.bag.last().copied();
+        assert_eq!(last, Some(piece_get_id('I')));
+        assert_eq!(app.game.bag.len(), prefill.chars().count() + 1);
+    }
+
+    #[test]
+    fn nested_buttons_win_hover_over_their_container() {
+        let mut app = App::new();
+        let hold = app.button_rect(HOLDBUTTON);
+        app.mouse = [hold[0] + 60.0, hold[1] + 10.0];
+        app.update_hover();
+        assert!(app.buttons[HOLDDELETE][0]);
+        assert!(!app.buttons[HOLDBUTTON][0]);
+
+        let next = app.button_rect(NEXTBUTTON);
+        app.mouse = [next[0] + 60.0, next[1] + 10.0];
+        app.update_hover();
+        assert!(app.buttons[SHUFBUTTON][0]);
+        assert!(!app.buttons[NEXTBUTTON][0]);
+
+        app.mouse = [hold[0] + 10.0, hold[1] + 60.0];
+        app.update_hover();
+        assert!(app.buttons[HOLDBUTTON][0]);
+        assert!(!app.buttons[HOLDDELETE][0]);
     }
 }
