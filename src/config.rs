@@ -65,7 +65,7 @@ impl Config {
         }
 
         Config {
-            ini: Ini::load(std::path::Path::new("settings.ini")),
+            ini: ini.clone(),
             scale: ini.read_num("SETTINGS", "SCALE", 1.0f64).max(0.05),
             grid_x: ini.read_num("OTHER", "CELL_AMOUNT_X", 10).clamp(4, 32),
             grid_y: ini.read_num("OTHER", "CELL_AMOUNT_Y", 20).clamp(4, 28),
@@ -171,4 +171,15 @@ pub fn skin_names(ini: &Ini) -> Vec<String> {
         names.push("DEFAULT".to_string());
     }
     names
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn config_saves_to_the_same_file_it_reads() {
+        let cfg = Config::load();
+        assert_eq!(cfg.ini.path, crate::app::resource("settings.ini"));
+    }
 }
