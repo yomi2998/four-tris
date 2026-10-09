@@ -224,6 +224,11 @@ impl App {
             item.vk = cfg.keybinds[i];
         }
 
+        #[cfg(not(test))]
+        let audio = Audio::new(cfg.volume);
+        #[cfg(test)]
+        let audio = Audio::silent();
+
         let mut app = App {
             canvas: Canvas::new(cfg.scale),
             colors_ini,
@@ -231,7 +236,7 @@ impl App {
             skins,
             game,
             ring: UndoRing::new(100),
-            audio: Audio::new(cfg.volume),
+            audio,
             texture: None,
             texture_tile: 0,
             icons: None,

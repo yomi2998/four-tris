@@ -45,6 +45,14 @@ impl Audio {
         audio
     }
 
+    pub fn silent() -> Audio {
+        Audio {
+            sinks: (0..SOUND_NAMES.len()).map(|_| None).collect(),
+            volume: 0,
+            _stream: None,
+        }
+    }
+
     pub fn set_volume(&mut self, volume: u32) {
         self.volume = volume;
         for sink in &self.sinks {
