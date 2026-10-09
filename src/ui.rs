@@ -720,7 +720,7 @@ impl App {
         let hint = format!("PRESS {} TO RESET", crate::vk::vkey_name(self.cfg.keybinds[KEY_RESET]));
         self.canvas.draw_text(
             &hint,
-            (gx, gy + gh / 2.0 + 26.0, self.gbounds[2], 20.0),
+            (gx, gy + gh / 2.0 + 26.0, self.gbounds[2], gh),
             Align::Center,
             FONT20,
             self.color(Skin::TXT),
