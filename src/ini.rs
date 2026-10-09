@@ -76,6 +76,7 @@ impl Ini {
                 if let Some(eq) = t.find('=') {
                     if t[..eq].trim().eq_ignore_ascii_case(key) {
                         self.lines[i] = format!("{key}={value}");
+                        self.flush();
                         return;
                     }
                 }
@@ -106,5 +107,25 @@ pub fn format_num(v: f64) -> String {
         let mut s = String::new();
         let _ = write!(s, "{v}");
         s
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn write_existing_key_persists_to_disk() {
+        let path = std::env::temp_dir().join(format!("four-tris-ini-test-{}.ini", std::process::id()));
+        std::fs::write(&path, b"[SETTINGS]\nVOLUME=70\n# comment\nKB8=115\n").unwrap();
+        let mut ini = Ini::load(&path);
+        ini.write("SETTINGS", "VOLUME", "35");
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert!(text.contains("VOLUME=35"));
+        assert!(text.contains("# comment"));
+        assert!(text.contains("KB8=115"));
+        let reloaded = Ini::load(&path);
+        assert_eq!(reloaded.read_num("SETTINGS", "VOLUME", 70u32), 35u32);
+        std::fs::remove_file(&path).ok();
     }
 }

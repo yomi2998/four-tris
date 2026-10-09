@@ -70,6 +70,7 @@ impl Audio {
             sink.clear();
             if let Ok(source) = rodio::Decoder::new_wav(Cursor::new(data)) {
                 sink.append(source);
+                sink.play();
             }
         }
     }
@@ -77,4 +78,35 @@ impl Audio {
 
 fn load_sound_file(name: &str) -> Option<Vec<u8>> {
     std::fs::read(crate::app::resource("se").join(name)).ok()
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    #[ignore]
+    fn real_device_consumes_appended_sound() {
+        let audio = super::Audio::new(70);
+        audio.play("move");
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        let sink = audio.sinks[0].as_ref().expect("sink created on default device");
+        assert!(sink.empty(), "paused-sink regression: queue never consumed");
+    }
+
+    #[test]
+    #[ignore]
+    fn clear_without_play_stalls_sink() {
+        use std::io::Cursor;
+        let (stream, handle) = rodio::OutputStream::try_default().unwrap();
+        let sink = rodio::Sink::try_new(&handle).unwrap();
+        sink.clear();
+        let data = std::fs::read(crate::app::resource("se").join("se_move.wav")).unwrap();
+        sink.append(rodio::Decoder::new_wav(Cursor::new(data)).unwrap());
+        std::thread::sleep(std::time::Duration::from_millis(200));
+        assert!(!sink.empty(), "clear() unexpectedly resumed on its own");
+        sink.play();
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        assert!(sink.empty(), "sink.play() did not resume playback");
+        drop(sink);
+        drop(stream);
+    }
 }

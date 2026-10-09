@@ -1651,4 +1651,21 @@ mod tests {
         assert_eq!(classify(204, 204, 204), 8); // light gray
         assert_eq!(classify(255, 255, 255), 8); // white
     }
+
+    #[test]
+    fn reset_clears_top_out_in_pc_mode() {
+        let mut app = super::App::new();
+        loop {
+            if matches!(app.game.mode, super::Mode::PC) {
+                break;
+            }
+            app.switch_mode();
+        }
+        app.game.lose_game();
+        assert!(app.game.lost);
+        app.keybind_action(super::KEY_RESET);
+        assert!(!app.game.lost);
+        app.step();
+        assert!(!app.game.lost);
+    }
 }

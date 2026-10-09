@@ -717,6 +717,15 @@ impl App {
             self.color(Skin::REV),
             None,
         );
+        let hint = format!("PRESS {} TO RESET", crate::vk::vkey_name(self.cfg.keybinds[KEY_RESET]));
+        self.canvas.draw_text(
+            &hint,
+            (gx, gy + gh / 2.0 + 26.0, self.gbounds[2], 20.0),
+            Align::Center,
+            FONT20,
+            self.color(Skin::TXT),
+            None,
+        );
     }
 
     fn draw_perfect(&mut self) {
