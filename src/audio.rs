@@ -45,6 +45,7 @@ impl Audio {
         audio
     }
 
+    #[cfg(test)]
     pub fn silent() -> Audio {
         Audio {
             sinks: (0..SOUND_NAMES.len()).map(|_| None).collect(),

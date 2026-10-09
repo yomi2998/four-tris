@@ -74,7 +74,8 @@ Notes:
 ### AutoIt version (Windows, legacy)
 
 The original AutoIt client (`Tetris.au3` and its `lib/`, `ai/`, BASS
-binaries, `icon.ico`, `Compression.rtf`) has been removed from this fork.
+binaries, `Compression.rtf`) has been removed from this fork. Its
+`icon.ico` is kept and embedded as the Windows executable icon.
 It is still available in the [upstream repository](https://github.com/fiorescarlatto/four-tris)
 history, or on [the original author's Discord](https://discord.gg/UhbnyAzWfw)
 as a compiled standalone executable.
