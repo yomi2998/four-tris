@@ -22,9 +22,16 @@ The last black square represents the color of an empty cell.
 
 ## Reporting issues, suggestions, feedback, bugs
 
-1. Ask in `#bug-reports` / `#feature-requests` / `#questions` on the [Official Discord](https://discord.gg/UhbnyAzWfw) if you are not entirely sure if it's a bug etc.
-2. Check if it's already reported or requested in the appropriate text channels.
-3. If not, try to be descriptive and show how the bug occourred.
+This fork ships the Rust port; the Rust version is what its issues cover.
+
+1. Check [the issue tracker](https://github.com/yomi2998/four-tris/issues) for duplicates first.
+2. Open a new issue here for anything about the Rust build (`src/`), the
+   snapshot tool, backends (Wayland/X11), HiDPI, or crashes on Linux,
+   Windows or macOS. Include OS + window backend, version (`Cargo.toml`
+   `version` or release tag), and steps to reproduce.
+3. Bugs in the original AutoIt/Windows client are not tracked here; that
+   version lives in the [upstream repository](https://github.com/fiorescarlatto/four-tris)
+   and its [Discord](https://discord.gg/UhbnyAzWfw).
 
 ## Building
 
@@ -86,11 +93,9 @@ The Rust port lives in `src/`:
 -   `audio.rs` – sound effects via `rodio`
 -   `snap.rs` – screen capture for the snapshot tool (slurp+grim, grim, XDG portal, X11)
 
-If you want to add a new feature or in generally contribute I recommend to get in touch with me on [Discord](https://discord.gg/UhbnyAzWfw):
-
-<a href="https://discord.gg/UhbnyAzWfw" target="_blank">
-<img src="https://i.imgur.com/SoawBhW.png" alt="discord logo" width="50">
-</a>
+For features and larger changes, open an issue here first to discuss the
+approach; pull requests against this repository are welcome. Contributions
+are offered under the same GPL-3.0-or-later license as the project.
 
 
 ## License
