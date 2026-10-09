@@ -20,17 +20,20 @@ jobs:
           - os: windows-latest
             pkg: windows-x86_64
           - os: macos-14
-            pkg: macos-aarch64
-          - os: macos-13
-            pkg: macos-x86_64
+            pkg: macos-universal
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+      - if: runner.os == 'macOS'
+        run: rustup target add x86_64-apple-darwin
       - name: Build
         run: cargo build --release --locked
+      - name: Build Intel slice
+        if: runner.os == 'macOS'
+        run: cargo build --release --locked --target x86_64-apple-darwin
       - name: Package
         shell: bash
         run: |
@@ -39,6 +42,8 @@ jobs:
           mkdir -p "$name/se" "$name/textures"
           if [ "${{ runner.os }}" = "Windows" ]; then
             cp target/release/four-tris.exe "$name/"
+          elif [ "${{ runner.os }}" = "macOS" ]; then
+            lipo -create target/release/four-tris target/x86_64-apple-darwin/release/four-tris -output "$name/four-tris"
           else
             cp target/release/four-tris "$name/"
           fi
@@ -54,7 +59,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.pkg }}
-          path: four-tris-*.{tar.gz,zip}
+          path: four-tris-*
           if-no-files-found: error
 
   release:
