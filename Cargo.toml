@@ -1,0 +1,30 @@
+[package]
+name = "four-tris"
+version = "1.5.2"
+edition = "2021"
+description = "Open source training tool for block-stacking games."
+license = "GPL-3.0-or-later"
+
+[dependencies]
+winit = "0.30"
+softbuffer = "0.4"
+image = { version = "0.25", default-features = false, features = ["png", "bmp"] }
+rodio = { version = "0.20", default-features = false, features = ["wav"] }
+fontdue = "0.9"
+arboard = { version = "3", default-features = false, features = ["image-data"] }
+
+[target.'cfg(unix)'.dependencies]
+x11rb = { version = "0.13", optional = true, features = ["randr"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+ashpd = { version = "0.13", default-features = false, features = ["screenshot", "tokio"] }
+tokio = { version = "1", default-features = false, features = ["rt", "time"] }
+arboard = { version = "3", default-features = false, features = ["image-data", "wayland-data-control"] }
+
+[features]
+default = ["x11-capture"]
+x11-capture = ["dep:x11rb"]
+
+[profile.release]
+opt-level = 2
+lto = "thin"
