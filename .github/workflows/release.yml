@@ -1,0 +1,75 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            pkg: linux-x86_64
+          - os: windows-latest
+            pkg: windows-x86_64
+          - os: macos-14
+            pkg: macos-aarch64
+          - os: macos-13
+            pkg: macos-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+      - name: Build
+        run: cargo build --release --locked
+      - name: Package
+        shell: bash
+        run: |
+          set -euo pipefail
+          name="four-tris-${GITHUB_REF_NAME}-${{ matrix.pkg }}"
+          mkdir -p "$name/se" "$name/textures"
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cp target/release/four-tris.exe "$name/"
+          else
+            cp target/release/four-tris "$name/"
+          fi
+          cp settings.ini colors.ini piece_list.txt buttons.bmp icon.png LICENSE.txt README.md "$name/"
+          cp se/*.wav "$name/se/"
+          cp textures/* "$name/textures/"
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            7z a -tzip "$name.zip" "$name" >/dev/null
+          else
+            tar czf "$name.tar.gz" "$name"
+          fi
+          rm -rf "$name"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.pkg }}
+          path: four-tris-*.{tar.gz,zip}
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
+          body: |
+            Source for these binaries: https://github.com/yomi2998/four-tris/tree/${{ github.ref_name }}
+            four-tris is free software under the GNU GPL v3 (or later); see LICENSE.txt
+            and the README build instructions to rebuild these binaries from source.
